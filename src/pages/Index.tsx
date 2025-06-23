@@ -1,15 +1,16 @@
-
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit3, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Note {
   id: string;
   title: string;
   content: string;
+  completed: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const Index = () => {
     if (savedNotes) {
       const parsedNotes = JSON.parse(savedNotes).map((note: any) => ({
         ...note,
+        completed: note.completed || false,
         createdAt: new Date(note.createdAt),
         updatedAt: new Date(note.updatedAt),
       }));
@@ -46,6 +48,7 @@ const Index = () => {
       id: Date.now().toString(),
       title: 'New Note',
       content: '',
+      completed: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -95,6 +98,24 @@ const Index = () => {
     setEditTitle(note.title);
     setEditContent(note.content);
     setIsEditing(true);
+  };
+
+  const toggleNoteCompletion = (noteId: string) => {
+    const updatedNotes = notes.map(note =>
+      note.id === noteId
+        ? { ...note, completed: !note.completed, updatedAt: new Date() }
+        : note
+    );
+    setNotes(updatedNotes);
+    
+    // Update selected note if it's the one being toggled
+    if (selectedNote && selectedNote.id === noteId) {
+      setSelectedNote({
+        ...selectedNote,
+        completed: !selectedNote.completed,
+        updatedAt: new Date(),
+      });
+    }
   };
 
   const cancelEdit = () => {
@@ -172,15 +193,27 @@ const Index = () => {
                     key={note.id}
                     className={`p-4 cursor-pointer transition-all duration-300 bg-white/10 border-white/20 backdrop-blur-sm hover:bg-white/20 ${
                       selectedNote?.id === note.id ? 'ring-2 ring-white/50 bg-white/20' : ''
-                    }`}
+                    } ${note.completed ? 'opacity-75' : ''}`}
                     onClick={() => setSelectedNote(note)}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <Checkbox
+                          checked={note.completed}
+                          onCheckedChange={() => toggleNoteCompletion(note.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="border-white/30 data-[state=checked]:bg-white/30 data-[state=checked]:border-white/50"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white truncate mb-1">
+                        <h3 className={`font-semibold text-white truncate mb-1 ${
+                          note.completed ? 'line-through' : ''
+                        }`}>
                           {note.title}
                         </h3>
-                        <p className="text-white/70 text-sm line-clamp-2 mb-2">
+                        <p className={`text-white/70 text-sm line-clamp-2 mb-2 ${
+                          note.completed ? 'line-through' : ''
+                        }`}>
                           {note.content || 'No content'}
                         </p>
                         <p className="text-white/50 text-xs">
@@ -264,13 +297,22 @@ const Index = () => {
                 ) : (
                   <div className="p-6 h-full">
                     <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-2xl font-bold text-white mb-1">
-                          {selectedNote.title}
-                        </h2>
-                        <p className="text-white/50 text-sm">
-                          Last updated: {formatDate(selectedNote.updatedAt)}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedNote.completed}
+                          onCheckedChange={() => toggleNoteCompletion(selectedNote.id)}
+                          className="border-white/30 data-[state=checked]:bg-white/30 data-[state=checked]:border-white/50"
+                        />
+                        <div>
+                          <h2 className={`text-2xl font-bold text-white mb-1 ${
+                            selectedNote.completed ? 'line-through' : ''
+                          }`}>
+                            {selectedNote.title}
+                          </h2>
+                          <p className="text-white/50 text-sm">
+                            Last updated: {formatDate(selectedNote.updatedAt)}
+                          </p>
+                        </div>
                       </div>
                       <Button
                         onClick={() => editNote(selectedNote)}
@@ -281,7 +323,9 @@ const Index = () => {
                       </Button>
                     </div>
                     <div className="prose prose-invert max-w-none">
-                      <div className="text-white/90 whitespace-pre-wrap leading-relaxed">
+                      <div className={`text-white/90 whitespace-pre-wrap leading-relaxed ${
+                        selectedNote.completed ? 'line-through' : ''
+                      }`}>
                         {selectedNote.content || (
                           <span className="text-white/50 italic">
                             This note is empty. Click Edit to add content.
